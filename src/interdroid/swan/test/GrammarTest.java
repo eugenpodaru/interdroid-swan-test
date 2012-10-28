@@ -216,6 +216,77 @@ public class GrammarTest extends AndroidTestCase {
 			assertEquals((Long) values[i++], (Long) parser.time_value());
 		}
 	}
+	
+	public void testRemoteContextTypedValue() throws RecognitionException{
+		String[][] values = {
+			{"sensor1", "device1", "value.path", null, null, null},
+			{"sensor2", "device2", "value.two", "config=value", null, null},
+			{"sensor3", "device3", "three", null, HistoryReductionMode.MAX.toParseString(), null},
+			{"sensor4", "device4", "three", null, null, "100"},
+			{"sensor5", "device5", "three", null, HistoryReductionMode.MIN.toParseString(), null},
+			{"sensor6", "device6", "value.path.four", "config=value", HistoryReductionMode.MIN.toParseString(), "1000"},
+			{"sensor7", "device7", "value.path.five", "config=value2", HistoryReductionMode.MIN.toParseString(), null}
+		};
+		
+		for(int i=0;i<values.length;i++){
+			String[] value = values[i];
+			String stringValue = buildRemoteContextTypedValue(value);
+			//Log.d(TAG, "Testing: " + stringValue);
+			ContextExpressionParser parser = buildParser(stringValue);
+			ContextTypedValue ctv = (ContextTypedValue)
+					getValue(parser.context_typed_value(), "typed_value");
+
+			assertNotNull(ctv);
+			assertEquals(value[0], ctv.getEntity());
+			assertEquals(value[1], ctv.getDeviceId());
+			assertEquals(value[2], ctv.getValuePath());
+			if (value[3] != null) {
+				assertNotNull(ctv.getConfiguration().get("config"));
+			} else {
+				assertNull(ctv.getConfiguration().get("config"));
+			}
+			if (value[4] != null) {
+				assertEquals(value[4],
+						ctv.getHistoryReductionMode().toParseString());
+			} else {
+				assertEquals(HistoryReductionMode.DEFAULT_MODE,
+						ctv.getHistoryReductionMode());
+			}
+			if (value[5] != null) {
+				assertEquals(value[5], String.valueOf(ctv.getHistoryLength()));
+			} else {
+				assertEquals(ContextTypedValue.DEFAULT_HISTORY_LENGTH,
+						ctv.getHistoryLength());
+			}
+		}
+	}
+
+	private String buildRemoteContextTypedValue(String[] value) {
+		StringBuffer ret = new StringBuffer(value[0]);
+		ret.append('@');
+		ret.append(value[1]);
+		ret.append(':');
+		ret.append(value[2]);
+		if (value[3] != null) {
+			ret.append('?');
+			ret.append(value[3]);
+		}
+		ret.append(' ');
+		if (value[4] != null || value[5] != null) {
+			ret.append('{');
+			if (value[4] != null) {
+				ret.append(value[4]);
+				if (value[5] != null) {
+					ret.append(',');
+				}
+			}
+			if (value[5] != null) {
+				ret.append(value[5]);
+			}
+			ret.append('}');
+		}
+		return ret.toString();
+	}
 
 	public void testContextTypedValue() throws RecognitionException {
 		String[][] values = {
@@ -237,7 +308,7 @@ public class GrammarTest extends AndroidTestCase {
 		for (int i = 0; i < values.length; i++) {
 			String[] value = values[i];
 			String stringValue = buildContextTypedValue(value);
-			Log.d(TAG, "Testing: " + stringValue);
+			//Log.d(TAG, "Testing: " + stringValue);
 			ContextExpressionParser parser = buildParser(stringValue);
 			ContextTypedValue ctv = (ContextTypedValue)
 					getValue(parser.context_typed_value(), "typed_value");
